@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Employee, Prisma } from '@prisma/client';
 import { BaseRepository } from '@/shared/repositories/base.repository';
-import { PrismaService } from '@/core/prisma/prisma.service';
+import { PrismaService } from '@/core/database/prisma.service';
 import { DataScope } from '@/shared/interfaces';
 import { Role } from '@prisma/client';
 

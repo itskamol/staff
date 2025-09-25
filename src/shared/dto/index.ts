@@ -6,3 +6,5 @@ export * from './department.dto';
 export * from './auth.dto';
 export * from './error.dto';
 export * from './api-response.dto';
+export * from './computer-monitoring.dto';
+export * from './computer-monitoring-response.dto';

@@ -39,4 +39,20 @@ export class QueryDto extends PaginationDto {
         required: false,
     })
     order?: 'asc' | 'desc';
+
+    @ApiProperty({
+        description: 'Period start date',
+        required: false,
+    })
+    @IsString()
+    @IsOptional()
+    startDate?: string;
+
+    @ApiProperty({
+        description: 'Period end date',
+        required: false,
+    })
+    @IsString()
+    @IsOptional()
+    endDate?: string;
 }
