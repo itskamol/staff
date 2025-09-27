@@ -67,6 +67,44 @@ export class CreateUserDto {
     @IsBoolean()
     isActive?: boolean;
 }
+export class UpdateCurrentUserDto {
+    @ApiProperty({
+        description: 'The username of the user.',
+        example: 'username123',
+    })
+    @IsString()
+    @IsOptional()
+    username?: string;
+
+
+    @ApiProperty({
+        description: 'The name of the user.',
+        example: 'name123',
+    })
+    @IsString()
+    @IsOptional()
+    name?: string;
+
+    @ApiProperty({
+        description: 'The current password of the user.',
+        example: 'Password123!',
+    })
+    @IsString()
+    currentPassword: string;
+
+    @ApiProperty({
+        description:
+            'The new password for the user account. It must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.',
+        example: 'NewPassword456!',
+    })
+    @IsString()
+    @MinLength(8)
+    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+        message:
+            'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+    })
+    newPassword: string;
+}
 
 export class UpdateUserDto {
     @ApiProperty({
@@ -77,6 +115,16 @@ export class UpdateUserDto {
     @IsOptional()
     @IsString()
     username?: string;
+
+    @ApiProperty({
+        description: 'The role of the user.',
+        enum: Role,
+        example: Role.ADMIN,
+        required: false,
+    })
+    @IsOptional()
+    @IsEnum(Role)
+    role?: Role;
 
     @ApiProperty({
         description: 'The ID of the organization the user belongs to.',

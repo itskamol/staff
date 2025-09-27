@@ -3,7 +3,7 @@ import { Prisma, User } from '@prisma/client';
 import { UserRepository } from './user.repository';
 import { LoggerService } from '@/core/logger';
 import { PasswordUtil } from '@/shared/utils';
-import { CreateUserDto, UpdateUserDto } from '@/shared/dto';
+import { CreateUserDto, UpdateCurrentUserDto, UpdateUserDto } from '@/shared/dto';
 import { QueryDto } from '@/shared/dto/query.dto';
 
 @Injectable()
@@ -16,19 +16,17 @@ export class UserService {
     /**
      * Create a new user
      */
-    async createUser(
-        createUserDto: CreateUserDto
-    ): Promise<Omit<User, 'password'>> {
-        // Validate password strength
-        const passwordValidation = PasswordUtil.validatePassword(createUserDto.password);
-        if (!passwordValidation.isValid) {
-            throw new ConflictException(
-                `Password validation failed: ${passwordValidation.errors.join(', ')}`
-            );
-        }
+    async createUser(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+        // Check if username already exists
+        const existingUser = await this.userRepository.findFirst({
+            username: createUserDto.username,
+        });
 
+        if (existingUser) {
+            throw new ConflictException('Username already exists');
+        }
         // Hash password
-        const passwordHash = await PasswordUtil.hash(createUserDto.password);
+        const passwordHash = await this.validateAndHashPassword(createUserDto.password);
 
         // Create user
         const { password, ...user } = await this.userRepository.create({
@@ -46,8 +44,8 @@ export class UserService {
     /**
      * Find user by ID
      */
-    async findById(id: number): Promise<User> {
-        const user = await this.userRepository.findById(id);
+    async findById(id: number): Promise<Omit<User, 'password'>> {
+        const { password, ...user } = await this.userRepository.findById(id);
         if (!user) {
             throw new NotFoundException('User not found');
         }
@@ -64,26 +62,14 @@ export class UserService {
     /**
      * Update user
      */
-    async updateUser(
-        id: number,
-        updateUserDto: UpdateUserDto
-    ): Promise<Omit<User, 'password'>> {
+    async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<Omit<User, 'password'>> {
         const existingUser = await this.userRepository.findById(id);
         if (!existingUser) {
             throw new NotFoundException('User not found');
         }
 
         if (updateUserDto.password) {
-            // Validate password strength
-            const passwordValidation = PasswordUtil.validatePassword(updateUserDto.password);
-            if (!passwordValidation.isValid) {
-                throw new ConflictException(
-                    `Password validation failed: ${passwordValidation.errors.join(', ')}`
-                );
-            }
-
-            // Hash new password
-            updateUserDto.password = await PasswordUtil.hash(updateUserDto.password);
+            updateUserDto.password = await this.validateAndHashPassword(updateUserDto.password);
         }
 
         const { password, ...updatedUser } = await this.userRepository.update(id, updateUserDto);
@@ -95,37 +81,60 @@ export class UserService {
         return updatedUser;
     }
 
-    async getAllUsers({ search, isActive, sort, order, page, limit }: QueryDto) {
+    async updateCurrentUser(
+        id: number,
+        { currentPassword, newPassword, ...updateUserData }: UpdateCurrentUserDto
+    ): Promise<Omit<User, 'password'>> {
+        const updateUserDto: Prisma.UserUpdateInput = updateUserData;
 
+        const user = await this.userRepository.findById(id);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        if (currentPassword && newPassword) {
+            const isPasswordValid = await PasswordUtil.compare(currentPassword, user.password);
+
+            if (!isPasswordValid) {
+                throw new ConflictException('Current password is incorrect');
+            }
+
+            updateUserDto.password = await this.validateAndHashPassword(newPassword);
+        }
+
+        return this.userRepository.update(id, updateUserDto);
+    }
+
+    async getAllUsers({ search, isActive, sort, order, page, limit }: QueryDto) {
         const filters: Prisma.UserWhereInput = {};
-                if (search) {
-                    filters.OR = [
-                        { name: { contains: search, mode: 'insensitive' } },
-                        { username: { contains: search, mode: 'insensitive' } },
-                    ];
-                }
-        
-                if (typeof isActive === 'boolean') {
-                    filters.isActive = isActive;
-                }
-        
-                const [data, total] = await Promise.all([
-                    this.userRepository.findMany(
-                        filters,
-                        { [sort]: order },
-                        undefined,
-                        { page, limit },
-                        { password: false }
-                    ),
-                    this.userRepository.count(filters),
-                ]);
+        if (search) {
+            filters.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { username: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
+        if (typeof isActive === 'boolean') {
+            filters.isActive = isActive;
+        }
+
+        const [data, total] = await Promise.all([
+            this.userRepository.findMany(
+                filters,
+                { [sort]: order },
+                undefined,
+                { page, limit },
+                { password: false }
+            ),
+            this.userRepository.count(filters),
+        ]);
 
         return {
             data,
             total,
             page,
             limit,
-        }
+        };
     }
 
     async deleteUser(id: number): Promise<Omit<User, 'password'>> {
@@ -141,5 +150,18 @@ export class UserService {
         });
 
         return deletedUser;
+    }
+
+    private validateAndHashPassword(password: string): Promise<string> {
+        // Validate password strength
+        const passwordValidation = PasswordUtil.validatePassword(password);
+        if (!passwordValidation.isValid) {
+            throw new ConflictException(
+                `Password validation failed: ${passwordValidation.errors.join(', ')}`
+            );
+        }
+
+        // Hash password
+        return PasswordUtil.hash(password);
     }
 }

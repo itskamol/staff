@@ -9,19 +9,9 @@ import {
     Query,
     Delete,
 } from '@nestjs/common';
-import {
-    ApiBearerAuth,
-    ApiExtraModels,
-    ApiParam,
-    ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiExtraModels, ApiParam, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
-import {
-    ApiSuccessResponse,
-    CreateUserDto,
-    UpdateUserDto,
-    UserResponseDto,
-} from '@/shared/dto';
+import { ApiSuccessResponse, CreateUserDto, UpdateUserDto, UserResponseDto } from '@/shared/dto';
 import { NoScoping, Roles, User } from '@/shared/decorators';
 import { UserContext } from '@/shared/interfaces';
 import { Role, User as UserModel } from '@prisma/client';
@@ -50,6 +40,15 @@ export class UserController {
         return this.userService.createUser(createUserDto);
     }
 
+    @Get('roles')
+    @ApiCrudOperation(String, 'list', {
+        summary: 'Get all user roles',
+        includeQueries: { pagination: false },
+    })
+    async getUserRoles() {
+        return Object.values(Role);
+    }
+
     @Get()
     @ApiCrudOperation(UserResponseDto, 'list', {
         summary: 'Get all users',
@@ -64,17 +63,41 @@ export class UserController {
         return this.userService.getAllUsers(query);
     }
 
+    @Get('me')
+    @ApiCrudOperation(UserResponseDto, 'get', {
+        summary: 'Get current user',
+    })
+    async getCurrentUser(@User() user: UserContext): Promise<Omit<UserModel, 'password'>> {
+        const currentUser = await this.userService.findById(+user.sub);
+        if (!currentUser) {
+            throw new NotFoundException('User not found');
+        }
+        return currentUser;
+    }
+
     @Get(':id')
     @ApiParam({ name: 'id', description: 'ID of the user' })
     @ApiCrudOperation(UserResponseDto, 'get', {
         summary: 'Get a specific user by ID',
     })
-    async getUserById(@Param('id') id: number): Promise<UserModel> {
+    async getUserById(@Param('id') id: number): Promise<Omit<UserModel, 'password'>> {
         const user = await this.userService.findById(id);
         if (!user) {
             throw new NotFoundException('User not found');
         }
         return user;
+    }
+
+    @Put('me')
+    @ApiCrudOperation(UserResponseDto, 'update', {
+        body: UpdateUserDto,
+        summary: 'Update current user',
+    })
+    async updateCurrentUser(
+        @Body() updateUserDto: UpdateUserDto,
+        @User() user: UserContext
+    ): Promise<UserResponseDto> {
+        return this.userService.updateUser(+user.sub, updateUserDto);
     }
 
     @Put(':id')

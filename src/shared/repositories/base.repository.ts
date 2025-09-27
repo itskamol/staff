@@ -91,7 +91,8 @@ export abstract class BaseRepository<
     async findById(
         id: string | number,
         include?: TInclude,
-        scope?: DataScope
+        scope?: DataScope,
+        select?: TSelect
     ): Promise<TEntity | null> {
         this.logger.debug(`Finding ${this.modelName} by ID: ${id}`);
 
@@ -100,6 +101,7 @@ export abstract class BaseRepository<
 
         const result = await this.getDelegate().findFirst({
             where: scopedWhere,
+            select,
             include,
         });
 

@@ -255,9 +255,17 @@ export const ApiCrudOperation = <DataDto extends Type<unknown>>(
             break;
         case 'list':
             decorators.push(
-                ApiOkResponsePaginated(dataDto, {
-                    summary: options?.summary || `Get ${dataDto.name.toLowerCase()} list`,
-                }),
+                ...(options?.includeQueries?.pagination
+                    ? [
+                          ApiOkResponsePaginated(dataDto, {
+                              summary: options?.summary || `Get ${dataDto.name.toLowerCase()} list`,
+                          }),
+                      ]
+                    : [
+                          ApiOkResponseData(dataDto, {
+                              summary: options?.summary || `Get ${dataDto.name.toLowerCase()} list`,
+                          }),
+                      ]),
                 ApiQueries(options?.includeQueries || { pagination: true }),
                 ApiErrorResponses({
                     unauthorized: true,
