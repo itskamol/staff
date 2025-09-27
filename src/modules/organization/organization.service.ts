@@ -30,13 +30,8 @@ export class OrganizationService {
                 filters,
                 { [sort]: order },
                 {
-                    _count: { select: { departments: true } },
-                    departments: {
-                        include: {
-                            _count: {
-                                select: { employees: true },
-                            },
-                        },
+                    _count: {
+                        select: { departments: true, employees: true },
                     },
                 },
                 { page, limit },
