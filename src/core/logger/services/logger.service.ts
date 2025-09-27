@@ -130,5 +130,6 @@ export class LoggerService implements NestLoggerService, OnModuleDestroy {
             errorContext.trace,
             errorContext
         );
+        console.error(errorContext);
     }
 }

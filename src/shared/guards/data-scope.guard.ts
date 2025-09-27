@@ -55,7 +55,7 @@ export class DataScopeGuard implements CanActivate {
             return true;
         }
 
-        if (!user.organizationId) {
+        if (!user.organizationId && user.role !== Role.ADMIN) {
             this.logger.logUserAction(+user.sub, 'DATA_SCOPE_VIOLATION_NO_ORGANIZATION', {
                 userId: user.sub,
                 role: user.role,
@@ -67,7 +67,7 @@ export class DataScopeGuard implements CanActivate {
 
         const scope: DataScope = {
             organizationId: user.organizationId,
-            departments: user.departments,
+            departments: user?.departments,
         };
 
         // Attach scope to request for use in services

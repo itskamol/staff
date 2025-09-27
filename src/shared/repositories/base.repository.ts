@@ -39,12 +39,12 @@ export abstract class BaseRepository<
 
         const scopedWhere = { ...where };
 
-        if (scope.organizationId) {
+        if (scope?.organizationId) {
             scopedWhere.organizationId = scope.organizationId;
         }
 
-        if (scope.departments.length) {
-            scopedWhere.departments = scope.departments;
+        if (scope?.departments?.length) {
+            scopedWhere.departments = scope?.departments;
         }
 
         return scopedWhere;
@@ -56,11 +56,11 @@ export abstract class BaseRepository<
     protected applyDataScopeToCreate(data: TCreateInput, scope: DataScope): TCreateInput {
         const scopedData = { ...data };
 
-        if (scope.organizationId && 'organizationId' in scopedData) {
+        if (scope?.organizationId && 'organizationId' in scopedData) {
             (scopedData as Record<string, unknown>).organizationId = scope.organizationId;
         }
 
-        if (scope.departments.length && 'departments' in scopedData) {
+        if (scope?.departments?.length && 'departments' in scopedData) {
             (scopedData as Record<string, unknown>).departments = scope.departments;
         }
 

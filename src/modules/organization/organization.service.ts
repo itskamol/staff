@@ -29,7 +29,16 @@ export class OrganizationService {
             this.organizationRepository.findMany(
                 filters,
                 { [sort]: order },
-                { _count: { select: { departments: true } } },
+                {
+                    _count: { select: { departments: true } },
+                    departments: {
+                        include: {
+                            _count: {
+                                select: { employees: true },
+                            },
+                        },
+                    },
+                },
                 { page, limit },
                 scope
             ),
@@ -49,7 +58,13 @@ export class OrganizationService {
     }
 
     async getOrganizationsByScope(scope: DataScope) {
-        return this.organizationRepository.findMany(undefined, undefined, undefined, undefined, scope);
+        return this.organizationRepository.findMany(
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            scope
+        );
     }
 
     async createOrganization(data: CreateOrganizationDto): Promise<Organization> {
