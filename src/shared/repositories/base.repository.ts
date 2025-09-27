@@ -16,6 +16,7 @@ export abstract class BaseRepository<
     TWhereUniqueInput extends Record<string, unknown> = { id: string | number },
     TOrderByInput extends Record<string, unknown> = Record<string, unknown>,
     TInclude extends Record<string, unknown> = Record<string, unknown>,
+    TSelect extends Record<string, unknown> = Record<string, unknown>
 > {
     protected readonly logger = new Logger(this.constructor.name);
     protected abstract readonly modelName: string;
@@ -176,6 +177,7 @@ export abstract class BaseRepository<
         orderBy?: TOrderByInput,
         include?: TInclude,
         pagination?: PaginationDto,
+        select?: TSelect,
         scope?: DataScope
     ): Promise<TEntity[]> {
         this.logger.debug(`Finding many ${this.modelName} with conditions:`, where);
@@ -214,12 +216,13 @@ export abstract class BaseRepository<
         orderBy?: TOrderByInput,
         include?: TInclude,
         pagination: PaginationDto = { page: 1, limit: 10 },
-        scope?: DataScope
+        scope?: DataScope,
+        select?: TSelect
     ): Promise<PaginationResponseDto<TEntity>> {
         this.logger.debug(`Finding paginated ${this.modelName} with conditions:`, where);
 
         const [data, total] = await Promise.all([
-            this.findMany(where, orderBy, include, pagination, scope),
+            this.findMany(where, orderBy, include, pagination, select, scope),
             this.count(where, scope),
         ]);
 
@@ -399,10 +402,11 @@ export abstract class BaseRepository<
         orderBy?: TOrderByInput,
         include?: TInclude,
         pagination?: PaginationDto,
-        scope?: DataScope
+        scope?: DataScope,
+        select?: TSelect
     ): Promise<TEntity[]> {
         const activeWhere = { ...where, isActive: true } as TWhereInput;
-        return this.findMany(activeWhere, orderBy, include, pagination, scope);
+        return this.findMany(activeWhere, orderBy, include, pagination, select, scope);
     }
 
     /**

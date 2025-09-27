@@ -1,9 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { UserRepository } from './user.repository';
 import { LoggerService } from '@/core/logger';
 import { PasswordUtil } from '@/shared/utils';
-import { ChangePasswordDto, CreateUserDto, UpdateUserDto } from '@/shared/dto';
+import { CreateUserDto, UpdateUserDto } from '@/shared/dto';
+import { QueryDto } from '@/shared/dto/query.dto';
 
 @Injectable()
 export class UserService {
@@ -72,6 +73,19 @@ export class UserService {
             throw new NotFoundException('User not found');
         }
 
+        if (updateUserDto.password) {
+            // Validate password strength
+            const passwordValidation = PasswordUtil.validatePassword(updateUserDto.password);
+            if (!passwordValidation.isValid) {
+                throw new ConflictException(
+                    `Password validation failed: ${passwordValidation.errors.join(', ')}`
+                );
+            }
+
+            // Hash new password
+            updateUserDto.password = await PasswordUtil.hash(updateUserDto.password);
+        }
+
         const { password, ...updatedUser } = await this.userRepository.update(id, updateUserDto);
 
         this.logger.logUserAction(id, 'USER_UPDATED', {
@@ -81,68 +95,51 @@ export class UserService {
         return updatedUser;
     }
 
-    /**
-     * Change user password
-     */
-    async changePassword(
-        userId: number,
-        changePasswordDto: ChangePasswordDto
-    ): Promise<void> {
-        const user = await this.userRepository.findById(userId);
-        if (!user) {
+    async getAllUsers({ search, isActive, sort, order, page, limit }: QueryDto) {
+
+        const filters: Prisma.UserWhereInput = {};
+                if (search) {
+                    filters.OR = [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { username: { contains: search, mode: 'insensitive' } },
+                    ];
+                }
+        
+                if (typeof isActive === 'boolean') {
+                    filters.isActive = isActive;
+                }
+        
+                const [data, total] = await Promise.all([
+                    this.userRepository.findMany(
+                        filters,
+                        { [sort]: order },
+                        undefined,
+                        { page, limit },
+                        { password: false }
+                    ),
+                    this.userRepository.count(filters),
+                ]);
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+        }
+    }
+
+    async deleteUser(id: number): Promise<Omit<User, 'password'>> {
+        const existingUser = await this.userRepository.findById(id);
+        if (!existingUser) {
             throw new NotFoundException('User not found');
         }
 
-        // Verify current password
-        const isCurrentPasswordValid = await PasswordUtil.compare(
-            changePasswordDto.currentPassword,
-            user.password
-        );
-        if (!isCurrentPasswordValid) {
-            this.logger.logUserAction(userId, 'PASSWORD_CHANGE_FAILED_INVALID_CURRENT');
-            throw new ConflictException('Current password is incorrect');
-        }
+        const { password, ...deletedUser } = await this.userRepository.delete(id);
 
-        // Validate new password strength
-        const passwordValidation = PasswordUtil.validatePassword(changePasswordDto.newPassword);
-        if (!passwordValidation.isValid) {
-            throw new ConflictException(
-                `Password validation failed: ${passwordValidation.errors.join(', ')}`
-            );
-        }
+        this.logger.logUserAction(id, 'USER_DELETED', {
+            username: deletedUser.username,
+        });
 
-        // Hash new password
-        const newPasswordHash = await PasswordUtil.hash(changePasswordDto.newPassword);
-
-        // Update password
-        await this.userRepository.update(userId, { password: newPasswordHash });
-
-        this.logger.logUserAction(userId, 'PASSWORD_CHANGED');
-    }
-
-    /**
-     * Deactivate user
-     */
-    async deactivateUser(id: number): Promise<Omit<User, 'password'>> {
-        const user = await this.updateUser(id, { isActive: false });
-
-        this.logger.logUserAction(id, 'USER_DEACTIVATED');
-
-        return user;
-    }
-
-    /**
-     * Activate user
-     */
-    async activateUser(id: number): Promise<Omit<User, 'password'>> {
-        const user = await this.updateUser(id, { isActive: true });
-
-        this.logger.logUserAction(id, 'USER_ACTIVATED');
-
-        return user;
-    }
-
-    async getAllUsers(): Promise<Omit<User, 'password'>[]> {
-        return this.userRepository.findMany();
+        return deletedUser;
     }
 }

@@ -26,7 +26,7 @@ export class CreateUserDto {
     })
     @IsString()
     @MinLength(8)
-    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]/, {
         message:
             'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
     })
@@ -35,10 +35,11 @@ export class CreateUserDto {
     @ApiProperty({
         description: 'The ID of the organization the user belongs to.',
         example: 1,
+        required: false,
     })
-    @IsString()
-    @IsNotEmpty()
-    organizationId: number;
+    @IsNumber()
+    @IsOptional()
+    organizationId?: number;
 
     @ApiProperty({
         description: 'The full name of the user.',
@@ -87,6 +88,20 @@ export class UpdateUserDto {
     organizationId?: number;
 
     @ApiProperty({
+        description: 'The password for the user account.',
+        example: 'NewPassword123!',
+        required: false,
+    })
+    @IsOptional()
+    @IsString()
+    @MinLength(8)
+    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]/, {
+        message:
+            'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+    })
+    password?: string;
+
+    @ApiProperty({
         description: 'The full name of the user.',
         example: 'John Doe',
         required: false,
@@ -104,28 +119,6 @@ export class UpdateUserDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
-}
-
-export class ChangePasswordDto {
-    @ApiProperty({
-        description: 'The current password of the user.',
-        example: 'Password123!',
-    })
-    @IsString()
-    currentPassword: string;
-
-    @ApiProperty({
-        description:
-            'The new password for the user account. It must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.',
-        example: 'NewPassword456!',
-    })
-    @IsString()
-    @MinLength(8)
-    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
-        message:
-            'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-    })
-    newPassword: string;
 }
 
 export class AssignUserToOrganizationDto {

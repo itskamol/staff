@@ -11,7 +11,8 @@ export class UserRepository extends BaseRepository<
     Prisma.UserWhereInput,
     Prisma.UserWhereUniqueInput,
     Prisma.UserOrderByWithRelationInput,
-    Prisma.UserInclude
+    Prisma.UserInclude,
+    Prisma.UserSelect
 > {
     protected readonly modelName = Prisma.ModelName.User;
 

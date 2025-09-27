@@ -2,38 +2,31 @@ import {
     Body,
     Controller,
     Get,
-    HttpCode,
-    HttpStatus,
     NotFoundException,
     Param,
     Put,
     Post,
+    Query,
+    Delete,
 } from '@nestjs/common';
 import {
     ApiBearerAuth,
-    ApiBody,
     ApiExtraModels,
-    ApiOperation,
     ApiParam,
-    ApiQuery,
-    ApiResponse,
     ApiTags,
-    getSchemaPath,
-    OmitType,
 } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import {
-    ApiErrorResponse,
     ApiSuccessResponse,
-    ChangePasswordDto,
     CreateUserDto,
     UpdateUserDto,
     UserResponseDto,
 } from '@/shared/dto';
 import { NoScoping, Roles, User } from '@/shared/decorators';
 import { UserContext } from '@/shared/interfaces';
-import { Prisma, Role, User as UserModel } from '@prisma/client';
-import { ApiErrorResponses, ApiOkResponseData, ApiQueries, ApiCrudOperation } from '@/shared/utils';
+import { Role, User as UserModel } from '@prisma/client';
+import { ApiCrudOperation } from '@/shared/utils';
+import { QueryDto } from '@/shared/dto/query.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -67,8 +60,8 @@ export class UserController {
             filters: ['isActive'],
         },
     })
-    async getAllUsers(): Promise<Omit<UserModel, 'password'>[]> {
-        return this.userService.getAllUsers();
+    async getAllUsers(@Query() query: QueryDto) {
+        return this.userService.getAllUsers(query);
     }
 
     @Get(':id')
@@ -94,49 +87,17 @@ export class UserController {
         @Param('id') id: number,
         @Body() updateUserDto: UpdateUserDto,
         @User() user: UserContext
-    ): Promise<Omit<UserModel, 'password'>> {
+    ): Promise<UserResponseDto> {
         return this.userService.updateUser(id, updateUserDto);
     }
 
-    @Put(':id/password')
-    @HttpCode(HttpStatus.NO_CONTENT)
-    @ApiParam({ name: 'id', description: 'ID of the user to change password' })
-    @ApiCrudOperation(UserResponseDto, 'update', {
-        body: ChangePasswordDto,
-        summary: 'Change a user password',
-        errorResponses: { forbidden: true, notFound: true },
+    @Delete(':id')
+    @ApiParam({ name: 'id', description: 'ID of the user to delete' })
+    @ApiCrudOperation(UserResponseDto, 'delete', {
+        summary: 'Delete a user',
+        errorResponses: { notFound: true },
     })
-    async changeUserPassword(
-        @Param('id') id: number,
-        @Body() changePasswordDto: ChangePasswordDto,
-        @User() user: UserContext
-    ): Promise<void> {
-        await this.userService.changePassword(id, changePasswordDto);
-    }
-
-    @Put(':id/activate')
-    @ApiParam({ name: 'id', description: 'ID of the user to activate' })
-    @ApiCrudOperation(UserResponseDto, 'update', {
-        summary: 'Activate a user',
-    })
-    async activateUser(
-        @Param('id') id: number,
-        @User() user: UserContext
-    ): Promise<Omit<UserModel, 'password'>> {
-        return this.userService.activateUser(id);
-    }
-
-    @Put(':id/deactivate')
-    @ApiParam({ name: 'id', description: 'ID of the user to deactivate' })
-    @ApiCrudOperation(UserResponseDto, 'update', {
-        summary: 'Deactivate a user',
-        body: OmitType(UpdateUserDto, ['isActive'] as const),
-        errorResponses: { forbidden: true, notFound: true },
-    })
-    async deactivateUser(
-        @Param('id') id: number,
-        @User() user: UserContext
-    ): Promise<Omit<UserModel, 'password'>> {
-        return this.userService.deactivateUser(id);
+    async deleteUser(@Param('id') id: number): Promise<UserResponseDto> {
+        return this.userService.deleteUser(id);
     }
 }

@@ -35,7 +35,8 @@ export class OrganizationService {
                     },
                 },
                 { page, limit },
-                scope
+                undefined,
+                scope,
             ),
             this.organizationRepository.count(filters, scope),
         ]);
@@ -58,7 +59,8 @@ export class OrganizationService {
             undefined,
             undefined,
             undefined,
-            scope
+            undefined,
+            scope,
         );
     }
 

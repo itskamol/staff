@@ -31,6 +31,7 @@ export class DepartmentService {
                 { [sort]: order },
                 { _count: { select: { employees: true, children: true } } },
                 { page, limit },
+                undefined,
                 scope
             ),
             this.departmentRepository.count(filters, scope),
